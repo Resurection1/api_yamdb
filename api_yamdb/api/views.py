@@ -14,7 +14,7 @@ from .serializers import (
     CommentSerializer,
     ReviewSerializer,
     CategorySerializer,
-    GengreSerializer,
+    GenreSerializer,
     TitleSerializer,
 )
 
