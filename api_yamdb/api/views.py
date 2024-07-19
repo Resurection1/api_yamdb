@@ -1,6 +1,7 @@
 from rest_framework import viewsets, mixins, permissions, filters, status
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
+from rest_framework.serializers import Serializer
 
 from django.core.exceptions import ValidationError, PermissionDenied
 
@@ -56,7 +57,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         )
         return comment_list
 
-    def get_permissions(self):
+    def get_permissions(self) -> Permission:
         if self.request.method == 'GET':
             self.permission_classes = (permissions.AllowAny,)
         elif self.request.method == 'POST':
@@ -106,7 +107,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     search_fields = ('genre__slug', 'category__slug', '=year', '=name',)
     http_method_names = ('get', 'post', 'patch', 'delete')
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Serializer:
         if self.action == 'list':
             return serializers.TitleGetSerializer
         return serializers.TitleSerializer
@@ -123,7 +124,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Categories.objects.all()
     http_method_names = ('get', 'post', 'delete')
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Serializer:
         if self.action == 'list':
             return serializers.CategorySerializer
         return serializers.CategoryGetField
@@ -140,7 +141,7 @@ class GenreViewSet(viewsets.ModelViewSet):
     queryset = Genres.objects.all()
     http_method_names = ('get', 'post', 'delete')
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Serializer:
         if self.action == 'list':
             return serializers.GenreSerializer
         return serializers.GenreGetField
