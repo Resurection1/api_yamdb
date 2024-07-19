@@ -2,27 +2,34 @@ from rest_framework import viewsets, mixins, permissions, filters, status
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
 
 from django.db.models import QuerySet
 
 from django.shortcuts import get_object_or_404
 
-from reviews.models import Comment, Review, Category, Genre, Title
+from reviews.models import Comments, Reviews, Categories, Genres, Titles
 
 from .serializers import (
     CommentSerializer,
     ReviewSerializer,
     CategorySerializer,
+    CategoryGetField,
     GengreSerializer,
+    GenreGetField,
     TitleSerializer,
+    TitleGetSerializer
 )
 
-from .permissions import IsAuthorOrAdminOrModerOnly, IsAdminOrReadOnly
+from .permissions import (
+    IsAdmin,
+    IsAdminOrReadOnly,
+    IsAuthorOrAdminOrModerOnly
+)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
+    queryset = Comments.objects.all()
     serializer_class = CommentSerializer
     permission_classes = (
         permissions.IsAuthenticatedOrReadOnly,
@@ -33,7 +40,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer) -> Response:
         review_id: int = self.kwargs['review_id']
-        review: Review = get_object_or_404(Review, pk=review_id)
+        review: Reviews = get_object_or_404(Reviews, pk=review_id)
         if serializer.is_valid():
             serializer.save(author=self.request.user, review=review)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -41,25 +48,32 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self) -> QuerySet:
         review_id: int = self.kwargs['review_id']
-        review: Review = get_object_or_404(Review, pk=review_id)
-        comment_list: QuerySet[Comment] = Comment.objects.filter(review=review)
+        review: Reviews = get_object_or_404(Reviews, pk=review_id)
+        comment_list: QuerySet[Comments] = Comments.objects.filter(
+            review=review
+        )
         return comment_list
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            self.permission_classes = (permissions.AllowAny,)
+        elif self.request.method == 'POST':
+            self.permission_classes = (permissions.IsAuthenticated,)
+        else:
+            self.permission_classes = (IsAuthorOrAdminOrModerOnly,)
+        return super(CommentViewSet, self).get_permissions()
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    queryset = Review.objects.all()
+    queryset = Reviews.objects.all()
     serializer_class = ReviewSerializer
-    permission_classes = (
-        permissions.IsAuthenticatedOrReadOnly,
-        IsAuthorOrAdminOrModerOnly,
-    )
     pagination_class = LimitOffsetPagination
     http_method_names = ('get', 'post', 'patch', 'delete')
 
     def perform_create(self, serializer) -> Response:
         title_id: int = self.kwargs['title_id']
-        title: Title = get_object_or_404(Title, pk=title_id)
-        user_reviews: QuerySet[Review] = Review.objects.filter(
+        title: Titles = get_object_or_404(Titles, pk=title_id)
+        user_reviews: QuerySet[Reviews] = Reviews.objects.filter(
             title=title,
             author=self.request.user
         )
@@ -70,23 +84,68 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self) -> QuerySet:
         title_id: int = self.kwargs['title_id']
-        title: Title = get_object_or_404(Title, pk=title_id)
-        review_list: QuerySet[Review] = Review.objects.filter(title=title)
+        title: Titles = get_object_or_404(Titles, pk=title_id)
+        review_list: QuerySet[Reviews] = Reviews.objects.filter(title=title)
         return review_list
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            self.permission_classes = (permissions.AllowAny,)
+        elif self.request.method == 'POST':
+            self.permission_classes = (permissions.IsAuthenticated,)
+        else:
+            self.permission_classes = (IsAuthorOrAdminOrModerOnly,)
+        return super(TitleViewSet, self).get_permissions()
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
-    serializer_class = TitleSerializer
-    permission_classes = (IsAdminOrReadOnly,)
+    queryset = Titles.objects.all()
     filter_backends = (filters.SearchFilter,)
     search_fields = ('genre__slug', 'category__slug', '=year', '=name',)
     http_method_names = ('get', 'post', 'patch', 'delete')
 
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return serializers.TitleGetSerializer
+        return serializers.TitleSerializer
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            self.permission_classes = (permissions.AllowAny,)
+        else:
+            self.permission_classes = (IsAdmin,)
+        return super(TitleViewSet, self).get_permissions()
+
 
 class CategoryViewSet(viewsets.ModelViewSet):
-    ...
+    queryset = Categories.objects.all()
+    http_method_names = ('get', 'post', 'delete')
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return serializers.CategorySerializer
+        return serializers.CategoryGetField
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            self.permission_classes = (permissions.AllowAny,)
+        else:
+            self.permission_classes = (IsAdmin,)
+        return super(CategoryViewSet, self).get_permissions()
 
 
 class GenreViewSet(viewsets.ModelViewSet):
-    ...
+    queryset = Genres.objects.all()
+    http_method_names = ('get', 'post', 'delete')
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return serializers.GenreSerializer
+        return serializers.GenreGetField
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            self.permission_classes = (permissions.AllowAny,)
+        else:
+            self.permission_classes = (IsAdmin,)
+        return super(GenreViewSet, self).get_permissions()
