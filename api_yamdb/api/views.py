@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError, PermissionDenied
 
 from django.db.models import QuerySet
 
+from django.contrib.auth.models import Permission
+
 from django.shortcuts import get_object_or_404
 
 from reviews.models import Comments, Reviews, Categories, Genres, Titles
@@ -88,7 +90,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         review_list: QuerySet[Reviews] = Reviews.objects.filter(title=title)
         return review_list
 
-    def get_permissions(self):
+    def get_permissions(self) -> Permission:
         if self.request.method == 'GET':
             self.permission_classes = (permissions.AllowAny,)
         elif self.request.method == 'POST':
@@ -109,7 +111,7 @@ class TitleViewSet(viewsets.ModelViewSet):
             return serializers.TitleGetSerializer
         return serializers.TitleSerializer
 
-    def get_permissions(self):
+    def get_permissions(self) -> Permission:
         if self.request.method == 'GET':
             self.permission_classes = (permissions.AllowAny,)
         else:
@@ -126,7 +128,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
             return serializers.CategorySerializer
         return serializers.CategoryGetField
 
-    def get_permissions(self):
+    def get_permissions(self) -> Permission:
         if self.request.method == 'GET':
             self.permission_classes = (permissions.AllowAny,)
         else:
@@ -143,7 +145,7 @@ class GenreViewSet(viewsets.ModelViewSet):
             return serializers.GenreSerializer
         return serializers.GenreGetField
 
-    def get_permissions(self):
+    def get_permissions(self) -> Permission:
         if self.request.method == 'GET':
             self.permission_classes = (permissions.AllowAny,)
         else:
