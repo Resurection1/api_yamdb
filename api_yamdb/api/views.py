@@ -18,7 +18,7 @@ from .serializers import (
     ReviewSerializer,
     CategorySerializer,
     CategoryGetField,
-    GengreSerializer,
+    GenreSerializer,
     GenreGetField,
     TitleSerializer,
     TitleGetSerializer
