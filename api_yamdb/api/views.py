@@ -105,8 +105,8 @@ class TitleViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self) -> Serializer:
         if self.action == 'list':
-            return serializers.TitleGetSerializer
-        return serializers.TitleSerializer
+            return TitleGetSerializer
+        return TitleSerializer
 
     def get_permissions(self) -> Permission:
         if self.request.method == 'GET':
@@ -122,8 +122,8 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self) -> Serializer:
         if self.action == 'list':
-            return serializers.CategorySerializer
-        return serializers.CategoryGetField
+            return CategorySerializer
+        return CategoryGetField
 
     def get_permissions(self) -> Permission:
         if self.request.method == 'GET':
@@ -139,8 +139,8 @@ class GenreViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self) -> Serializer:
         if self.action == 'list':
-            return serializers.GenreSerializer
-        return serializers.GenreGetField
+            return GenreSerializer
+        return GenreGetField
 
     def get_permissions(self) -> Permission:
         if self.request.method == 'GET':
