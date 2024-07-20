@@ -84,7 +84,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Reviews
-        exclude = ['title']
+        exclude = ['titles',]
 
     def validate(self, data):
         if self.context['request'].method == 'POST':
