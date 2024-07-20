@@ -83,12 +83,3 @@ class TitleViewSet(viewsets.ModelViewSet):
     search_fields = ('genre__slug', 'category__slug', '=year', '=name',)
     http_method_names = ('get', 'post', 'patch', 'delete')
 
-
-class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Categories.objects.all()
-    serializer_class = CategorySerializer
-
-
-class GenreViewSet(viewsets.ModelViewSet):
-    queryset = Genres.objects.all()
-    serializer_class = GenreSerializer
