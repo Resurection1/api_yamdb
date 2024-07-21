@@ -182,32 +182,22 @@ class ReviewViewSet(viewsets.ModelViewSet):
     pagination_class = LimitOffsetPagination
     http_method_names = ('get', 'post', 'patch', 'delete')
 
-    def perform_create(self, serializer) -> Response:
-        title_id: int = self.kwargs['title_id']
-        title: Titles = get_object_or_404(Titles, pk=title_id)
-        user_reviews: QuerySet[Reviews] = Reviews.objects.filter(
-            title=title,
-            author=self.request.user
+    def get_title(self):
+        """Возвращает объект текущего произведения."""
+        title_id = self.kwargs.get('title_id')
+        return get_object_or_404(Titles, pk=title_id)
+
+    def get_queryset(self):
+        """Возвращает queryset c отзывами для текущего произведения."""
+        return self.get_title().reviews.all()
+
+    def perform_create(self, serializer):
+        """Создает отзыв для текущего произведения,
+        где автором является текущий пользователь."""
+        serializer.save(
+            author=self.request.user,
+            title=self.get_title()
         )
-        if user_reviews.exists():
-            raise ValidationError
-        serializer.save(author=self.request.user, title=title)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def get_queryset(self) -> QuerySet:
-        title_id: int = self.kwargs['title_id']
-        title: Titles = get_object_or_404(Titles, pk=title_id)
-        review_list: QuerySet[Reviews] = Reviews.objects.filter(title=title)
-        return review_list
-
-    def get_permissions(self) -> Permission:
-        if self.request.method == 'GET':
-            self.permission_classes = (permissions.AllowAny,)
-        elif self.request.method == 'POST':
-            self.permission_classes = (permissions.IsAuthenticated,)
-        else:
-            self.permission_classes = (IsAuthorOrAdminOrModerOnly,)
-        return super(TitleViewSet, self).get_permissions()
 
 
 class TitleViewSet(viewsets.ModelViewSet):
@@ -231,33 +221,9 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Categories.objects.all()
-    http_method_names = ('get', 'post', 'delete')
-
-    def get_serializer_class(self) -> Serializer:
-        if self.action == 'list':
-            return CategorySerializer
-        return CategoryGetField
-
-    def get_permissions(self) -> Permission:
-        if self.request.method == 'GET':
-            self.permission_classes = (permissions.AllowAny,)
-        else:
-            self.permission_classes = (IsAdmin,)
-        return super(CategoryViewSet, self).get_permissions()
+    serializer_class = CategorySerializer
 
 
 class GenreViewSet(viewsets.ModelViewSet):
     queryset = Genres.objects.all()
-    http_method_names = ('get', 'post', 'delete')
-
-    def get_serializer_class(self) -> Serializer:
-        if self.action == 'list':
-            return GenreSerializer
-        return GenreGetField
-
-    def get_permissions(self) -> Permission:
-        if self.request.method == 'GET':
-            self.permission_classes = (permissions.AllowAny,)
-        else:
-            self.permission_classes = (IsAdmin,)
-        return super(GenreViewSet, self).get_permissions()
+    serializer_class = GenreSerializer
