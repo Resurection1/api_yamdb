@@ -1,13 +1,72 @@
 from rest_framework import serializers
 
-from reviews.models import Categories, Comments, Genres, Reviews, Titles  #User надо добавить в модель?
+from reviews.models import Categories, Comments, Genres, Reviews, Titles
+from users.models import MyUser
+
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    """Сериализатор для создания объекта класса User."""
+
+    class Meta:
+        model = MyUser
+        fields = (
+            'username', 'email'
+        )
+
+    def validate(self, data):
+        """Запрещает пользователям присваивать себе имя me
+        и использовать повторные username и email."""
+        if data.get('username') == 'me':
+            raise serializers.ValidationError(
+                'Использовать имя me запрещено'
+            )
+        if MyUser.objects.filter(username=data.get('username')):
+            raise serializers.ValidationError(
+                'Пользователь с таким username уже существует'
+            )
+        if MyUser.objects.filter(email=data.get('email')):
+            raise serializers.ValidationError(
+                'Пользователь с таким email уже существует'
+            )
+        return data
+
+
+class UserRecieveTokenSerializer(serializers.Serializer):
+    """Сериализатор для объекта класса User при получении токена JWT."""
+
+    username = serializers.RegexField(
+        regex=r'^[\w.@+-]+$',
+        max_length=150,
+        required=True
+    )
+    confirmation_code = serializers.CharField(
+        max_length=150,
+        required=True
+    )
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Сериализатор для модели User."""
+
+    class Meta:
+        model = MyUser
+        fields = (
+            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
+        )
+
+    def validate_username(self, username):
+        if username in 'me':
+            raise serializers.ValidationError(
+                'Использовать имя me запрещено'
+            )
+        return username
 
 
 class CategorySerializer(serializers.ModelSerializer):
     """Сериалайзер для модели категория."""
 
     class Meta:
-        fields = ('name', 'slug')
+        fields = '__all__'
         model = Categories
 
 
@@ -23,7 +82,7 @@ class GenreSerializer(serializers.ModelSerializer):
     """Сериалайзер для модели жанры."""
 
     class Meta:
-        fields = ('name', 'slug')
+        fields = '__all__'
         model = Genres
 
 

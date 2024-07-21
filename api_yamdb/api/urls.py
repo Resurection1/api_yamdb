@@ -7,12 +7,16 @@ from api.views import (
     CategoryViewSet,
     GenreViewSet,
     TitleViewSet,
+    UserCreateViewSet,
+    UserReceiveTokenViewSet,
+    UserViewSet
 )
-from users.views import UserSignupView, TokenView
+
 
 app_name = 'api'
 
 router_v1 = routers.DefaultRouter()
+router_v1.register('users', UserViewSet, basename='users')
 router_v1.register('categories', CategoryViewSet, basename='categories')
 router_v1.register('genres', GenreViewSet, basename='genres')
 router_v1.register('titles', TitleViewSet, basename='titles')
@@ -25,8 +29,21 @@ router_v1.register(
     CommentViewSet, basename='comment'
 )
 
+auth_urls = [
+    path(
+        'signup/',
+        UserCreateViewSet.as_view({'post': 'create'}),
+        name='signup'
+    ),
+    path(
+        'token/',
+        UserReceiveTokenViewSet.as_view({'post': 'create'}),
+        name='token'
+    )
+]
+
+
 urlpatterns = [
-    path('auth/signup/', UserSignupView.as_view(), name='signup'),
-    path('auth/token/', TokenView.as_view(), name='token'),
+    path('auth/', include(auth_urls)),
     path('', include(router_v1.urls)),
 ]
