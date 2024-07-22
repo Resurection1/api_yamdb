@@ -2,7 +2,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, mixins, permissions, filters, status
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework_simplejwt.tokens import AccessToken
@@ -53,16 +53,23 @@ class UserCreateViewSet(mixins.CreateModelMixin,
     permission_classes = (permissions.AllowAny,)
 
     def create(self, request):
-        """Создает объект класса User и
-        отправляет на почту пользователя код подтверждения."""
-        serializer = UserCreateSerializer(data=request.data)
+        """Создает объект класса User и отправляет на почту пользователя код подтверждения."""
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user, _ = MyUser.objects.get_or_create(**serializer.validated_data)
+
+        try:
+            user = MyUser.objects.get(username=serializer.validated_data['username'])
+            user.email = serializer.validated_data['email']
+            user.save(update_fields=['email'])
+        except MyUser.DoesNotExist:
+            user = MyUser.objects.create(**serializer.validated_data)
+
         confirmation_code = default_token_generator.make_token(user)
         send_confirmation_code(
             email=user.email,
             confirmation_code=confirmation_code
         )
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -151,6 +158,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         permissions.IsAuthenticatedOrReadOnly,
         IsAuthorOrAdminOrModerOnly
     )
+    http_method_names = ('get', 'post', 'patch', 'delete')
 
     def get_review(self):
         """Возвращает объект текущего отзыва."""
@@ -178,6 +186,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         permissions.IsAuthenticatedOrReadOnly,
         IsAuthorOrAdminOrModerOnly
     )
+    http_method_names = ('get', 'post', 'patch', 'delete')
 
     def get_title(self):
         """Возвращает объект текущего произведения."""
@@ -205,6 +214,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAnonimReadOnly | IsAdminOrSuperUser,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
+    http_method_names = ('get', 'post', 'patch', 'delete')
 
     def get_serializer_class(self):
         """Определяет какой сериализатор будет использоваться

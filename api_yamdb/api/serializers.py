@@ -20,11 +20,11 @@ class UserCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Использовать имя me запрещено'
             )
-        if MyUser.objects.filter(username=data.get('username')):
+        elif MyUser.objects.filter(username=data.get('username')):
             raise serializers.ValidationError(
                 'Пользователь с таким username уже существует'
             )
-        if MyUser.objects.filter(email=data.get('email')):
+        elif MyUser.objects.filter(email=data.get('email')):
             raise serializers.ValidationError(
                 'Пользователь с таким email уже существует'
             )
