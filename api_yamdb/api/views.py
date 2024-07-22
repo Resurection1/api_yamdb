@@ -141,10 +141,7 @@ class UserViewSet(mixins.ListModelMixin,
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comments.objects.all()
-    serializer_class = CommentSerializer
-    pagination_class = LimitOffsetPagination
-    http_method_names = ('get', 'post', 'patch', 'delete')
+    
 
     def perform_create(self, serializer) -> Response:
         review_id: int = self.kwargs['review_id']
