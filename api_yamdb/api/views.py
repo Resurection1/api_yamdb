@@ -141,7 +141,14 @@ class UserViewSet(mixins.ListModelMixin,
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    
+    """Вьюсет для обьектов модели Comment."""
+
+    serializer_class = CommentSerializer
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly,
+        IsAuthorOrAdminOrModerOnly
+    )
+    http_method_names = ('get', 'post', 'patch', 'delete')
 
     def perform_create(self, serializer) -> Response:
         review_id: int = self.kwargs['review_id']
