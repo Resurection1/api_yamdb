@@ -2,10 +2,10 @@ from django.urls import include, path
 from rest_framework import routers
 
 from api.views import (
-    CommentViewSet,
-    ReviewViewSet,
     CategoryViewSet,
+    CommentViewSet,
     GenreViewSet,
+    ReviewViewSet,
     TitleViewSet,
     UserCreateViewSet,
     UserReceiveTokenViewSet,

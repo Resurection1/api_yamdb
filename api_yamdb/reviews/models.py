@@ -64,22 +64,25 @@ class Categories(models.Model):
         return self.name
 
 
-class Titles(models.Model):  # произведения
+class Title(models.Model):
+    """Класс произведений."""
     name = models.CharField(max_length=256,)
     year = models.IntegerField()
     description = models.TextField()
     genre = models.ManyToManyField(Genres)
-    category = models.OneToOneField(
+    category = models.ForeignKey(
         Categories,
-        on_delete=models.CASCADE,
-        related_name='titles'
+        on_delete=models.SET_NULL,
+        related_name='titles',
+        verbose_name='категория',
+        null=True
     )
 
     def __str__(self):
         return self.name
 
 
-class Reviews(models.Model):
+class Review(models.Model):
     """Класс отзывов."""
 
     text = models.TextField(
@@ -104,7 +107,7 @@ class Reviews(models.Model):
         db_index=True
     )
     title = models.ForeignKey(
-        Titles,
+        Title,
         on_delete=models.CASCADE,
         related_name='reviews',
         verbose_name='произведение',
@@ -144,7 +147,7 @@ class Comments(models.Model):
         db_index=True
     )
     review = models.ForeignKey(
-        Reviews,
+        Review,
         on_delete=models.CASCADE,
         related_name='comments',
         verbose_name='oтзыв',

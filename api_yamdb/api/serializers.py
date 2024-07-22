@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from reviews.models import Categories, Comments, Genres, Reviews, Titles
+from reviews.models import Categories, Comments, Genres, Review, Title
 from users.models import MyUser
 
 
@@ -20,11 +20,11 @@ class UserCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Использовать имя me запрещено'
             )
-        if MyUser.objects.filter(username=data.get('username')):
+        elif MyUser.objects.filter(username=data.get('username')):
             raise serializers.ValidationError(
                 'Пользователь с таким username уже существует'
             )
-        if MyUser.objects.filter(email=data.get('email')):
+        elif MyUser.objects.filter(email=data.get('email')):
             raise serializers.ValidationError(
                 'Пользователь с таким email уже существует'
             )
@@ -63,49 +63,34 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    """Сериалайзер для модели категория."""
+    """Сериализатор для модели Category."""
 
     class Meta:
-        fields = '__all__'
         model = Categories
-
-
-class CategoryGetField(serializers.SlugRelatedField):
-    """Сериалайзер для поля модели категория."""
-
-    def to_representation(self, value):
-        serializer = CategorySerializer(value)
-        return serializer.data
+        exclude = ('id',)
 
 
 class GenreSerializer(serializers.ModelSerializer):
-    """Сериалайзер для модели жанры."""
+    """Сериализатор для модели Genre."""
 
     class Meta:
-        fields = '__all__'
         model = Genres
-
-
-class GenreGetField(serializers.SlugRelatedField):
-    """Сериалайзер для поля модели жанры."""
-
-    def to_representation(self, value):
-        serializer = GenreSerializer(value)
-        return serializer.data
+        exclude = ('id',)
 
 
 class TitleGetSerializer(serializers.ModelSerializer):
-    """Сериалайзер для модели произведения(только чтение)."""
-    category = CategorySerializer(read_only=True)
+    """Сериализатор объектов класса Title при GET запросах."""
+
     genre = GenreSerializer(many=True, read_only=True)
+    category = CategorySerializer(read_only=True)
     rating = serializers.IntegerField(read_only=True)
 
     class Meta:
-        model = Titles
-        fields = [
-            'id', 'name', 'year', 'rating',
-            'description', 'genre', 'category'
-        ]
+        model = Title
+        fields = (
+            'id', 'name', 'year',
+            'rating', 'description', 'genre', 'category'
+        )
 
 
 class TitleSerializer(serializers.ModelSerializer):
@@ -122,7 +107,7 @@ class TitleSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = Titles
+        model = Title
         fields = (
             'name', 'year', 'description', 'genre', 'category')
 
@@ -140,7 +125,8 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comments
-        exclude = ['review']
+        fields = (
+            'id', 'text', 'author', 'pub_date')
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -149,7 +135,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = Reviews
+        model = Review
         fields = (
             'id', 'text', 'author', 'score', 'pub_date')
 
@@ -159,7 +145,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             return data
         author = self.context.get('request').user
         title_id = self.context.get('view').kwargs.get('title_id')
-        if Reviews.objects.filter(author=author, title=title_id).exists():
+        if Review.objects.filter(author=author, title=title_id).exists():
             raise serializers.ValidationError(
                 'Вы уже оставляли отзыв на это произведение'
             )
