@@ -1,46 +1,32 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets, mixins, permissions, filters, status
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
-from rest_framework.serializers import Serializer
-from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework.decorators import action
-
-from django.core.exceptions import ValidationError, PermissionDenied
-
-from django.db.models import QuerySet
-
-from django.contrib.auth.models import Permission
-
 from django.shortcuts import get_object_or_404
+from rest_framework import filters, mixins, permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import AccessToken
 
-from reviews.models import Comments, Review, Categories, Genres, Title
-from users.models import MyUser
-
+from .filters import TitleFilter
+from .mixin import CastomMixinCreateDestroy
+from .permissions import (
+    IsAdminOrSuperUser,
+    IsAnonimReadOnly,
+    IsAuthorOrAdminOrModerOnly
+)
+from reviews.models import Categories, Genres, Review, Title
 from .serializers import (
-    CommentSerializer,
-    ReviewSerializer,
     CategorySerializer,
-
+    CommentSerializer,
     GenreSerializer,
-
+    ReviewSerializer,
     TitleSerializer,
     TitleGetSerializer,
     UserCreateSerializer,
     UserRecieveTokenSerializer,
     UserSerializer
 )
-
-from .permissions import (
-    IsAdminOrSuperUser,
-    IsAnonimReadOnly,
-    IsAuthorOrAdminOrModerOnly
-)
-from .filters import TitleFilter
-from .mixin import CastomMixinCreateDestroy
-
+from users.models import MyUser
 from .utils import send_confirmation_code
 
 
@@ -53,23 +39,34 @@ class UserCreateViewSet(mixins.CreateModelMixin,
     permission_classes = (permissions.AllowAny,)
 
     def create(self, request):
-        """Создает объект класса User и отправляет на почту пользователя код подтверждения."""
+        """
+        Создает объект класса User.
+        Отправляет на почту пользователя код подтверждения.
+        """
+        req_username = request.data.get('username')
+        req_email = request.data.get('email')
+        req_user = self.queryset.filter(
+            username=req_username, email=req_email
+        )
+        if req_user.exists():
+            return Response(
+                self.serializer_class(req_user.first()).data,
+                status=status.HTTP_200_OK
+            )
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        try:
-            user = MyUser.objects.get(username=serializer.validated_data['username'])
+        user, created = MyUser.objects.get_or_create(
+            username=serializer.validated_data['username'],
+            defaults={'email': serializer.validated_data['email']}
+        )
+        if not created:
             user.email = serializer.validated_data['email']
             user.save(update_fields=['email'])
-        except MyUser.DoesNotExist:
-            user = MyUser.objects.create(**serializer.validated_data)
-
         confirmation_code = default_token_generator.make_token(user)
         send_confirmation_code(
             email=user.email,
             confirmation_code=confirmation_code
         )
-
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -99,23 +96,19 @@ class UserReceiveTokenViewSet(mixins.CreateModelMixin,
 class UserViewSet(mixins.ListModelMixin,
                   mixins.CreateModelMixin,
                   viewsets.GenericViewSet):
-    """Вьюсет для обьектов модели User."""
-
-    queryset = MyUser.objects.all()
+    queryset = MyUser.objects.all().order_by('id')
     serializer_class = UserSerializer
     permission_classes = (IsAdminOrSuperUser,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
 
-    @action(
+    @ action(
         detail=False,
         methods=['get', 'patch', 'delete'],
         url_path=r'(?P<username>[\w.@+-]+)',
         url_name='get_user'
     )
     def get_user_by_username(self, request, username):
-        """Обеспечивает получание данных пользователя по его username и
-        управление ими."""
         user = get_object_or_404(MyUser, username=username)
         if request.method == 'PATCH':
             serializer = UserSerializer(user, data=request.data, partial=True)
@@ -128,7 +121,7 @@ class UserViewSet(mixins.ListModelMixin,
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(
+    @ action(
         detail=False,
         methods=['get', 'patch'],
         url_path='me',
@@ -136,8 +129,6 @@ class UserViewSet(mixins.ListModelMixin,
         permission_classes=(permissions.IsAuthenticated,)
     )
     def get_me_data(self, request):
-        """Позволяет пользователю получить подробную информацию о себе
-        и редактировать её."""
         if request.method == 'PATCH':
             serializer = UserSerializer(
                 request.user, data=request.data,
@@ -209,7 +200,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class TitleViewSet(viewsets.ModelViewSet):
     """Вьюсет для создания обьектов класса Title."""
 
-    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
+    queryset = Title.objects.annotate(
+        rating=Avg('reviews__score')).order_by('id')
     serializer_class = TitleSerializer
     permission_classes = (IsAnonimReadOnly | IsAdminOrSuperUser,)
     filter_backends = (DjangoFilterBackend,)
@@ -225,10 +217,12 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 
 class CategoryViewSet(CastomMixinCreateDestroy):
+    """Вьюсет для создания обьектов класса Category."""
     queryset = Categories.objects.all()
     serializer_class = CategorySerializer
 
 
 class GenreViewSet(CastomMixinCreateDestroy):
+    """Вьюсет для создания обьектов класса Genre."""
     queryset = Genres.objects.all()
     serializer_class = GenreSerializer
