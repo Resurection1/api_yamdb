@@ -6,17 +6,20 @@ from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework.decorators import action
 
-from .filters import TitleFilter
-from .mixin import CastomMixinCreateDestroy
-from .permissions import (
-    IsAdminOrSuperUser,
-    IsAnonimReadOnly,
-    IsAuthorOrAdminOrModerOnly
-)
-from reviews.models import Categories, Genres, Review, Title
-from .serializers import (
-    CategorySerializer,
+from django.core.exceptions import ValidationError, PermissionDenied
+
+from django.db.models import QuerySet
+
+from django.contrib.auth.models import Permission
+
+from django.shortcuts import get_object_or_404
+
+from reviews.models import Comments, Review, Categories, Genres, Title
+from users.models import MyUser
+
+from api.serializers import (
     CommentSerializer,
     GenreSerializer,
     ReviewSerializer,
@@ -26,8 +29,16 @@ from .serializers import (
     UserRecieveTokenSerializer,
     UserSerializer
 )
-from users.models import MyUser
-from .utils import send_confirmation_code
+
+from api.permissions import (
+    IsAdminOrSuperUser,
+    IsAnonimReadOnly,
+    IsAuthorOrAdminOrModerOnly
+)
+from api.filters import TitleFilter
+from api.mixin import MixinCreateDestroy
+
+from api.utils import send_confirmation_code
 
 
 class UserCreateViewSet(mixins.CreateModelMixin,
@@ -216,13 +227,11 @@ class TitleViewSet(viewsets.ModelViewSet):
         return TitleSerializer
 
 
-class CategoryViewSet(CastomMixinCreateDestroy):
-    """Вьюсет для создания обьектов класса Category."""
+class CategoryViewSet(MixinCreateDestroy):
     queryset = Categories.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(CastomMixinCreateDestroy):
-    """Вьюсет для создания обьектов класса Genre."""
+class GenreViewSet(MixinCreateDestroy):
     queryset = Genres.objects.all()
     serializer_class = GenreSerializer

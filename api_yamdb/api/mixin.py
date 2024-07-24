@@ -3,10 +3,10 @@ from rest_framework import filters, mixins, viewsets
 from .permissions import IsAnonimReadOnly, IsAdminOrSuperUser
 
 
-class CastomMixinCreateDestroy(mixins.CreateModelMixin,
-                               mixins.ListModelMixin,
-                               mixins.DestroyModelMixin,
-                               viewsets.GenericViewSet):
+class MixinCreateDestroy(mixins.CreateModelMixin,
+                         mixins.ListModelMixin,
+                         mixins.DestroyModelMixin,
+                         viewsets.GenericViewSet):
     """Вьюсет, позволяющий осуществлять GET, POST и DELETE запросы.
     Поддерживает переменную slug."""
 
