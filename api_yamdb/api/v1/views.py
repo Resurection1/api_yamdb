@@ -6,19 +6,9 @@ from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework.decorators import action
-
-from django.core.exceptions import ValidationError, PermissionDenied
-
-from django.db.models import QuerySet
-
-from django.contrib.auth.models import Permission
-
-from django.shortcuts import get_object_or_404
 
 from reviews.models import Comments, Review, Categories, Genres, Title
 from users.models import MyUser
-
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
@@ -30,7 +20,6 @@ from .serializers import (
     UserRecieveTokenSerializer,
     UserSerializer
 )
-
 from .permissions import (
     IsAdminOrSuperUser,
     IsAnonimReadOnly,
@@ -38,7 +27,6 @@ from .permissions import (
 )
 from .filters import TitleFilter
 from .mixin import MixinCreateDestroy
-
 from .utils import send_confirmation_code
 
 
