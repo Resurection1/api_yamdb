@@ -2,7 +2,12 @@ from rest_framework import serializers
 
 from reviews.models import Categories, Comments, Genres, Review, Title
 from users.models import MyUser
-from api.constants import NAME_ME, USERNAME_CHECK, MAX_LENGTH_CODE, MAX_LENGTH_NAME
+from .constants import (
+    NAME_ME,
+    USERNAME_CHECK,
+    MAX_LENGTH_CODE,
+    MAX_LENGTH_NAME
+)
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -15,20 +20,15 @@ class UserCreateSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, data):
-        """Запрещает пользователям присваивать себе имя me
-        и использовать повторные username и email."""
+        """Запрещает пользователям присваивать себе имя 'me'"""
         if data.get('username') == NAME_ME:
             raise serializers.ValidationError(
                 'Использовать имя me запрещено'
             )
         elif MyUser.objects.filter(username=data.get('username')):
-            raise serializers.ValidationError(
-                'Пользователь с таким username уже существует'
-            )
+            return 'Пользователь с таким username уже существует'
         elif MyUser.objects.filter(email=data.get('email')):
-            raise serializers.ValidationError(
-                'Пользователь с таким email уже существует'
-            )
+            return 'Пользователь с таким email уже существует'
         return data
 
 
@@ -100,7 +100,9 @@ class TitleSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(
         slug_field='slug',
         queryset=Genres.objects.all(),
-        many=True
+        many=True,
+        allow_empty=False,
+        required=True
     )
     category = serializers.SlugRelatedField(
         slug_field='slug',

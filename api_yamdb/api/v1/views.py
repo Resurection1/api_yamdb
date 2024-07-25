@@ -19,7 +19,8 @@ from django.shortcuts import get_object_or_404
 from reviews.models import Comments, Review, Categories, Genres, Title
 from users.models import MyUser
 
-from api.serializers import (
+from .serializers import (
+    CategorySerializer,
     CommentSerializer,
     GenreSerializer,
     ReviewSerializer,
@@ -30,15 +31,15 @@ from api.serializers import (
     UserSerializer
 )
 
-from api.permissions import (
+from .permissions import (
     IsAdminOrSuperUser,
     IsAnonimReadOnly,
     IsAuthorOrAdminOrModerOnly
 )
-from api.filters import TitleFilter
-from api.mixin import MixinCreateDestroy
+from .filters import TitleFilter
+from .mixin import MixinCreateDestroy
 
-from api.utils import send_confirmation_code
+from .utils import send_confirmation_code
 
 
 class UserCreateViewSet(mixins.CreateModelMixin,
