@@ -5,7 +5,13 @@ from django.core.validators import (
 )
 from django.db import models
 
-from .constants import MAX_LENGTH
+from .constants import (
+    MAX_LENGTH_NAME,
+    MAX_LENGTH_SLUG,
+    MAX_LENGTH_TEXT,
+    REVIEW_MAX_VALUE,
+    REVIEW_MIN_VALUE
+)
 from .validators import max_year_validator
 
 Author = get_user_model()
@@ -15,12 +21,12 @@ class BaseGenresCategories(models.Model):
     """Базовый класс для жанров и категорий."""
 
     name = models.CharField(
-        max_length=256,
+        max_length=MAX_LENGTH_NAME,
         verbose_name='Hазвание жанра',
         db_index=True
     )
     slug = models.SlugField(
-        max_length=30,
+        max_length=MAX_LENGTH_SLUG,
         verbose_name='slug',
         unique=True,
     )
@@ -30,7 +36,7 @@ class BaseGenresCategories(models.Model):
         ordering = ('name',)
 
     def __str__(self):
-        return self.name[:MAX_LENGTH]
+        return self.name[:MAX_LENGTH_TEXT]
 
 
 class BaseReviewComments(models.Model):
@@ -53,7 +59,7 @@ class BaseReviewComments(models.Model):
         ordering = ('-pub_date',)
 
     def __str__(self):
-        return self.text[:MAX_LENGTH]
+        return self.text[:MAX_LENGTH_TEXT]
 
 
 class Genres(BaseGenresCategories):
@@ -76,7 +82,7 @@ class Title(models.Model):
     """Класс произведений."""
 
     name = models.CharField(
-        max_length=256,
+        max_length=MAX_LENGTH_NAME,
         verbose_name='Название произведения',
 
     )
@@ -89,7 +95,8 @@ class Title(models.Model):
     )
     genre = models.ManyToManyField(
         Genres,
-        verbose_name='Жанр'
+        verbose_name='Жанр',
+        through='TitleGenre'
     )
     category = models.ForeignKey(
         Categories,
@@ -105,7 +112,12 @@ class Title(models.Model):
         ordering = ('name',)
 
     def __str__(self):
-        return self.name[:MAX_LENGTH]
+        return self.name[:MAX_LENGTH_TEXT]
+
+
+class TitleGenre(models.Model):
+    title = models.ForeignKey(Title, on_delete=models.CASCADE)
+    genre = models.ForeignKey(Genres, on_delete=models.CASCADE)
 
 
 class Review(BaseReviewComments):
@@ -114,8 +126,14 @@ class Review(BaseReviewComments):
     score = models.PositiveIntegerField(
         verbose_name='Oценка',
         validators=[
-            MinValueValidator(1, message='Значение должно быть больше 1'),
-            MaxValueValidator(10, message='Значение должно быть больше 10')
+            MinValueValidator(
+                REVIEW_MIN_VALUE,
+                message=f'Значение должно быть больше {REVIEW_MIN_VALUE}'
+            ),
+            MaxValueValidator(
+                REVIEW_MAX_VALUE,
+                message=f'Значение должно быть больше {REVIEW_MAX_VALUE}'
+            )
         ],
     )
 

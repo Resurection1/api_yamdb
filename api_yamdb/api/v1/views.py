@@ -7,8 +7,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-from reviews.models import Comments, Review, Categories, Genres, Title
-from users.models import MyUser
+from .filters import TitleFilter
+from .mixin import MixinCreateDestroy
+from .permissions import (
+    IsAdminOrSuperUser,
+    IsAnonimReadOnly,
+    IsAuthorOrAdminOrModerOnly
+)
+from reviews.models import Categories, Genres, Review, Title
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
@@ -20,13 +26,7 @@ from .serializers import (
     UserRecieveTokenSerializer,
     UserSerializer
 )
-from .permissions import (
-    IsAdminOrSuperUser,
-    IsAnonimReadOnly,
-    IsAuthorOrAdminOrModerOnly
-)
-from .filters import TitleFilter
-from .mixin import MixinCreateDestroy
+from users.models import MyUser
 from .utils import send_confirmation_code
 
 
@@ -59,9 +59,7 @@ class UserCreateViewSet(mixins.CreateModelMixin,
             username=serializer.validated_data['username'],
             defaults={'email': serializer.validated_data['email']}
         )
-        if not created:
-            user.email = serializer.validated_data['email']
-            user.save(update_fields=['email'])
+        
         confirmation_code = default_token_generator.make_token(user)
         send_confirmation_code(
             email=user.email,
@@ -80,6 +78,7 @@ class UserReceiveTokenViewSet(mixins.CreateModelMixin,
 
     def create(self, request, *args, **kwargs):
         """Предоставляет пользователю JWT токен по коду подтверждения."""
+
         serializer = UserRecieveTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data.get('username')
@@ -96,7 +95,7 @@ class UserReceiveTokenViewSet(mixins.CreateModelMixin,
 class UserViewSet(mixins.ListModelMixin,
                   mixins.CreateModelMixin,
                   viewsets.GenericViewSet):
-    queryset = MyUser.objects.all().order_by('id')
+    queryset = MyUser.objects.all().order_by('username')
     serializer_class = UserSerializer
     permission_classes = (IsAdminOrSuperUser,)
     filter_backends = (filters.SearchFilter,)
@@ -158,7 +157,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Возвращает queryset c комментариями для текущего отзыва."""
-        return self.get_review().comments.all()
+        return self.get_review().comments.all().order_by('id')
 
     def perform_create(self, serializer):
         """Создает комментарий для текущего отзыва,
@@ -186,7 +185,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Возвращает queryset c отзывами для текущего произведения."""
-        return self.get_title().reviews.all()
+        return self.get_title().reviews.all().order_by('id')
 
     def perform_create(self, serializer):
         """Создает отзыв для текущего произведения,
@@ -209,7 +208,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', 'post', 'patch', 'delete')
 
     def get_serializer_class(self):
-        """Определяет какой сериализатор будет использоваться
+        """Определяет какой сериализатор будет использоваться 
         для разных типов запроса."""
         if self.request.method == 'GET':
             return TitleGetSerializer
@@ -217,10 +216,12 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 
 class CategoryViewSet(MixinCreateDestroy):
-    queryset = Categories.objects.all()
+    """Вьюсет для создания обьектов класса Category."""
+    queryset = Categories.objects.all().order_by('id')
     serializer_class = CategorySerializer
 
 
 class GenreViewSet(MixinCreateDestroy):
-    queryset = Genres.objects.all()
+    """Вьюсет для создания обьектов класса Genre."""
+    queryset = Genres.objects.all().order_by('id')
     serializer_class = GenreSerializer
