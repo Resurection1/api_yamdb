@@ -1,6 +1,7 @@
 from rest_framework import filters, mixins, viewsets
+from rest_framework.permissions import DjangoModelPermissionsOrAnonReadOnly
 
-from .permissions import IsAnonimReadOnly, IsAdminOrSuperUser
+from .permissions import IsAdminOrSuperUser
 
 
 class MixinCreateDestroy(mixins.CreateModelMixin,
@@ -10,7 +11,8 @@ class MixinCreateDestroy(mixins.CreateModelMixin,
     """Вьюсет, позволяющий осуществлять GET, POST и DELETE запросы.
     Поддерживает переменную slug."""
 
-    permission_classes = (IsAnonimReadOnly | IsAdminOrSuperUser,)
+    permission_classes = (
+        DjangoModelPermissionsOrAnonReadOnly | IsAdminOrSuperUser,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
     lookup_field = 'slug'

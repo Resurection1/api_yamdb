@@ -4,18 +4,20 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import (
+    DjangoModelPermissionsOrAnonReadOnly,
+    SAFE_METHODS
+)
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-from .filters import TitleFilter
-from .mixin import MixinCreateDestroy
-from .permissions import (
+from api.v1.filters import TitleFilter
+from api.v1.mixin import MixinCreateDestroy
+from api.v1.permissions import (
     IsAdminOrSuperUser,
-    IsAnonimReadOnly,
     IsAuthorOrAdminOrModerOnly
 )
-from reviews.models import Categories, Genres, Review, Title
-from .serializers import (
+from api.v1.serializers import (
     CategorySerializer,
     CommentSerializer,
     GenreSerializer,
@@ -26,8 +28,9 @@ from .serializers import (
     UserRecieveTokenSerializer,
     UserSerializer
 )
+from api.v1.utils import send_confirmation_code
+from reviews.models import Categories, Genres, Review, Title
 from users.models import MyUser
-from .utils import send_confirmation_code
 
 
 class UserCreateViewSet(mixins.CreateModelMixin,
@@ -151,8 +154,9 @@ class CommentViewSet(viewsets.ModelViewSet):
     def get_review(self):
         """Возвращает объект текущего отзыва."""
 
+        title_id = self.kwargs.get('title_id')
         review_id = self.kwargs.get('review_id')
-        return get_object_or_404(Review, pk=review_id)
+        return get_object_or_404(Review, pk=review_id, title_id=title_id)
 
     def get_queryset(self):
         """Возвращает queryset c комментариями для текущего отзыва."""
@@ -202,9 +206,10 @@ class TitleViewSet(viewsets.ModelViewSet):
     """Вьюсет для создания обьектов класса Title."""
 
     queryset = Title.objects.annotate(
-        rating=Avg('reviews__score')).order_by('id')
+        rating=Avg('reviews__score')).order_by('name')
     serializer_class = TitleSerializer
-    permission_classes = (IsAnonimReadOnly | IsAdminOrSuperUser,)
+    permission_classes = (
+        DjangoModelPermissionsOrAnonReadOnly | IsAdminOrSuperUser,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     http_method_names = ('get', 'post', 'patch', 'delete')
@@ -212,7 +217,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         """Определяет какой сериализатор будет использоваться."""
 
-        if self.request.method == 'GET':
+        if self.request.method == SAFE_METHODS:
             return TitleGetSerializer
         return TitleSerializer
 
