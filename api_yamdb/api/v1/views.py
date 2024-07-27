@@ -39,10 +39,8 @@ class UserCreateViewSet(mixins.CreateModelMixin,
     permission_classes = (permissions.AllowAny,)
 
     def create(self, request):
-        """
-        Создает объект класса User.
-        Отправляет на почту пользователя код подтверждения.
-        """
+        """Отправляет на почту пользователя код подтверждения."""
+
         req_username = request.data.get('username')
         req_email = request.data.get('email')
         req_user = self.queryset.filter(
@@ -59,7 +57,7 @@ class UserCreateViewSet(mixins.CreateModelMixin,
             username=serializer.validated_data['username'],
             defaults={'email': serializer.validated_data['email']}
         )
-        
+
         confirmation_code = default_token_generator.make_token(user)
         send_confirmation_code(
             email=user.email,
@@ -152,16 +150,18 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_review(self):
         """Возвращает объект текущего отзыва."""
+
         review_id = self.kwargs.get('review_id')
         return get_object_or_404(Review, pk=review_id)
 
     def get_queryset(self):
         """Возвращает queryset c комментариями для текущего отзыва."""
+
         return self.get_review().comments.all().order_by('id')
 
     def perform_create(self, serializer):
-        """Создает комментарий для текущего отзыва,
-        где автором является текущий пользователь."""
+        """Создает комментарий для текущего отзыва."""
+
         serializer.save(
             author=self.request.user,
             review=self.get_review()
@@ -180,16 +180,18 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def get_title(self):
         """Возвращает объект текущего произведения."""
+
         title_id = self.kwargs.get('title_id')
         return get_object_or_404(Title, pk=title_id)
 
     def get_queryset(self):
         """Возвращает queryset c отзывами для текущего произведения."""
+
         return self.get_title().reviews.all().order_by('id')
 
     def perform_create(self, serializer):
-        """Создает отзыв для текущего произведения,
-        где автором является текущий пользователь."""
+        """Создает отзыв для текущего произведения."""
+
         serializer.save(
             author=self.request.user,
             title=self.get_title()
@@ -208,8 +210,8 @@ class TitleViewSet(viewsets.ModelViewSet):
     http_method_names = ('get', 'post', 'patch', 'delete')
 
     def get_serializer_class(self):
-        """Определяет какой сериализатор будет использоваться 
-        для разных типов запроса."""
+        """Определяет какой сериализатор будет использоваться."""
+
         if self.request.method == 'GET':
             return TitleGetSerializer
         return TitleSerializer
@@ -217,11 +219,13 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 class CategoryViewSet(MixinCreateDestroy):
     """Вьюсет для создания обьектов класса Category."""
+
     queryset = Categories.objects.all().order_by('id')
     serializer_class = CategorySerializer
 
 
 class GenreViewSet(MixinCreateDestroy):
     """Вьюсет для создания обьектов класса Genre."""
+
     queryset = Genres.objects.all().order_by('id')
     serializer_class = GenreSerializer

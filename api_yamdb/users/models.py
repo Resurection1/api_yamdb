@@ -2,7 +2,12 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.db import models
 
-from .constants import MAX_LENGTH, MAX_LENGTH_EMAIL, MAX_LENGTH_ROLE
+from .constants import (
+    MAX_LENGTH,
+    MAX_LENGTH_EMAIL,
+    MAX_LENGTH_ROLE,
+    USERNAME_CHECK
+)
 from .validators import username_validator
 
 
@@ -23,7 +28,7 @@ class MyUser(AbstractUser):
         unique=True,
         db_index=True,
         validators=[RegexValidator(
-            regex=r'^[\w.@+-]+$',
+            regex=USERNAME_CHECK,
             message='Имя пользователя содержит недопустимый символ'
         ),
             username_validator,
