@@ -1,23 +1,37 @@
 from django.contrib.auth.tokens import default_token_generator
+from django.core.validators import RegexValidator
 from rest_framework import serializers
 
+from api.v1.constants import MAX_LENGTH_EMAIL, MAX_LENGTH_NAME, USERNAME_CHECK
 from api.v1.utils import send_confirmation_code
 from reviews.models import Categories, Comments, Genres, Review, Title
 from users.models import MyUser
+from users.validators import username_validator
 
 
-class UserCreateSerializer(serializers.ModelSerializer):
+class UserCreateSerializer(serializers.Serializer):
     """Сериализатор для создания объекта класса MyUser."""
 
-    class Meta:
-        model = MyUser
-        fields = ('username', 'email')
+    username = serializers.CharField(
+        max_length=MAX_LENGTH_NAME,
+        validators=[RegexValidator(
+            regex=USERNAME_CHECK,
+            message='Имя пользователя содержит недопустимый символ'
+        ),
+            username_validator,
+        ]
+    )
+    email = serializers.EmailField(
+        max_length=MAX_LENGTH_EMAIL,
+    )
 
     def validate(self, data):
         """Запрещает пользователям присваивать себе имя 'me'."""
 
         email = data.get('email')
         username = data.get('username')
+        if MyUser.objects.all().filter(email=email, username=username):
+            return data
 
         if data.get('username') == 'me':
             raise serializers.ValidationError(
@@ -140,12 +154,14 @@ class TitleSerializer(serializers.ModelSerializer):
 
     def to_representation(self, title):
         """Определяет какой сериализатор будет использоваться для чтения."""
+
         serializer = TitleGetSerializer(title)
         return serializer.data
 
 
 class CommentSerializer(serializers.ModelSerializer):
     """Сериалайзер для модели комментарий."""
+
     author = serializers.StringRelatedField(
         read_only=True
     )
@@ -157,6 +173,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
+    """Сериализатор для можели отзывов."""
     author = serializers.StringRelatedField(
         read_only=True
     )
@@ -168,6 +185,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Запрещает пользователям оставлять повторные отзывы."""
+
         if not self.context.get('request').method == 'POST':
             return data
         author = self.context.get('request').user

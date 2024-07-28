@@ -41,16 +41,6 @@ class UserCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     def create(self, request, *args, **kwargs):
         """Создает объект класса MyUser."""
-        req_username = request.data.get('username')
-        req_email = request.data.get('email')
-        req_user = self.queryset.filter(
-            username=req_username, email=req_email
-        )
-        if req_user.exists():
-            return Response(
-                self.serializer_class(req_user.first()).data,
-                status=status.HTTP_200_OK
-            )
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
