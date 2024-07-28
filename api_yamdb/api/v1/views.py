@@ -28,22 +28,19 @@ from api.v1.serializers import (
     UserRecieveTokenSerializer,
     UserSerializer
 )
-from api.v1.utils import send_confirmation_code
 from reviews.models import Categories, Genres, Review, Title
 from users.models import MyUser
 
 
-class UserCreateViewSet(mixins.CreateModelMixin,
-                        viewsets.GenericViewSet):
-    """Вьюсет для создания обьектов класса User."""
+class UserCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    """Вьюсет для создания обьектов класса MyUser."""
 
     queryset = MyUser.objects.all()
     serializer_class = UserCreateSerializer
     permission_classes = (permissions.AllowAny,)
 
-    def create(self, request):
-        """Отправляет на почту пользователя код подтверждения."""
-
+    def create(self, request, *args, **kwargs):
+        """Создает объект класса MyUser."""
         req_username = request.data.get('username')
         req_email = request.data.get('email')
         req_user = self.queryset.filter(
@@ -54,19 +51,14 @@ class UserCreateViewSet(mixins.CreateModelMixin,
                 self.serializer_class(req_user.first()).data,
                 status=status.HTTP_200_OK
             )
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user, created = MyUser.objects.get_or_create(
-            username=serializer.validated_data['username'],
-            defaults={'email': serializer.validated_data['email']}
-        )
+        self.perform_create(serializer)
 
-        confirmation_code = default_token_generator.make_token(user)
-        send_confirmation_code(
-            email=user.email,
-            confirmation_code=confirmation_code
-        )
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if serializer.instance:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class UserReceiveTokenViewSet(mixins.CreateModelMixin,
@@ -93,52 +85,37 @@ class UserReceiveTokenViewSet(mixins.CreateModelMixin,
         return Response(message, status=status.HTTP_200_OK)
 
 
-class UserViewSet(mixins.ListModelMixin,
-                  mixins.CreateModelMixin,
-                  viewsets.GenericViewSet):
+class UserViewSet(viewsets.ModelViewSet):
     queryset = MyUser.objects.all().order_by('username')
     serializer_class = UserSerializer
-    permission_classes = (IsAdminOrSuperUser,)
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('username',)
+    permission_classes = (IsAdminOrSuperUser, )
+    filter_backends = (filters.SearchFilter, )
+    filterset_fields = ('username')
+    search_fields = ('username', )
+    lookup_field = 'username'
+    http_method_names = [
+        'get', 'post', 'patch', 'delete',
+    ]
 
-    @ action(
+    @action(
+        methods=['get', 'patch'],
         detail=False,
-        methods=['get', 'patch', 'delete'],
-        url_path=r'(?P<username>[\w.@+-]+)',
-        url_name='get_user'
+        url_path='me',
+        permission_classes=(permissions.IsAuthenticated, )
     )
-    def get_user_by_username(self, request, username):
-        user = get_object_or_404(MyUser, username=username)
+    def get_patch_me(self, request):
+        user = get_object_or_404(MyUser, username=self.request.user)
+        if request.method == 'GET':
+            serializer = UserSerializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         if request.method == 'PATCH':
-            serializer = UserSerializer(user, data=request.data, partial=True)
+            data = request.data.copy()
+            if 'role' in data and not request.user.is_admin:
+                data.pop('role')
+            serializer = UserSerializer(user, data=data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        elif request.method == 'DELETE':
-            user.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        serializer = UserSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    @ action(
-        detail=False,
-        methods=['get', 'patch'],
-        url_path='me',
-        url_name='me',
-        permission_classes=(permissions.IsAuthenticated,)
-    )
-    def get_me_data(self, request):
-        if request.method == 'PATCH':
-            serializer = UserSerializer(
-                request.user, data=request.data,
-                partial=True, context={'request': request}
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save(role=request.user.role)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -225,12 +202,12 @@ class TitleViewSet(viewsets.ModelViewSet):
 class CategoryViewSet(MixinCreateDestroy):
     """Вьюсет для создания обьектов класса Category."""
 
-    queryset = Categories.objects.all().order_by('id')
+    queryset = Categories.objects.all().order_by('name')
     serializer_class = CategorySerializer
 
 
 class GenreViewSet(MixinCreateDestroy):
     """Вьюсет для создания обьектов класса Genre."""
 
-    queryset = Genres.objects.all().order_by('id')
+    queryset = Genres.objects.all().order_by('name')
     serializer_class = GenreSerializer

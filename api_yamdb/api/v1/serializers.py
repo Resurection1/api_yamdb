@@ -1,38 +1,54 @@
+from django.contrib.auth.tokens import default_token_generator
 from rest_framework import serializers
 
+from api.v1.utils import send_confirmation_code
 from reviews.models import Categories, Comments, Genres, Review, Title
 from users.models import MyUser
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
-    """Сериализатор для создания объекта класса User."""
+    """Сериализатор для создания объекта класса MyUser."""
 
     class Meta:
         model = MyUser
-        fields = (
-            'username', 'email'
-        )
+        fields = ('username', 'email')
 
     def validate(self, data):
-        """Запрещает пользователям присваивать себе имя me 
-        и использовать повторные username и email."""
+        """Запрещает пользователям присваивать себе имя 'me'."""
+
+        email = data.get('email')
+        username = data.get('username')
+
         if data.get('username') == 'me':
             raise serializers.ValidationError(
-                'Использовать имя me запрещено'
-            )
-        elif MyUser.objects.filter(username=data.get('username')):
+                'Использовать имя "me" запрещено')
+
+        if MyUser.objects.filter(username=username).exists():
             raise serializers.ValidationError(
-                'Пользователь с таким username уже существует'
-            )
-        elif MyUser.objects.filter(email=data.get('email')):
+                'Пользователь с таким username уже существует')
+
+        if MyUser.objects.filter(email=email).exists():
             raise serializers.ValidationError(
-                'Пользователь с таким email уже существует'
-            )
+                'Пользователь с таким email уже существует')
         return data
+
+    def create(self, validated_data):
+        user, created = MyUser.objects.get_or_create(
+            username=validated_data['username'],
+            defaults={'email': validated_data['email']}
+        )
+        if not created:
+            user.email = validated_data['email']
+            user.save(update_fields=['email'])
+
+        confirmation_code = default_token_generator.make_token(user)
+        send_confirmation_code(
+            email=user.email, confirmation_code=confirmation_code)
+        return user
 
 
 class UserRecieveTokenSerializer(serializers.Serializer):
-    """Сериализатор для объекта класса User при получении токена JWT."""
+    """Сериализатор для объекта класса MyUser при получении токена JWT."""
 
     username = serializers.RegexField(
         regex=r'^[\w.@+-]+$',
@@ -46,20 +62,31 @@ class UserRecieveTokenSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Сериализатор для модели User."""
+    """Сериализатор для модели MyUser."""
 
     class Meta:
         model = MyUser
-        fields = (
-            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
-        )
+        fields = ('username', 'email', 'first_name',
+                  'last_name', 'bio', 'role')
 
     def validate_username(self, username):
-        if username in 'me':
+        if username == 'me':
             raise serializers.ValidationError(
                 'Использовать имя me запрещено'
             )
         return username
+
+    def validate_role(self, role):
+        if role not in ['user', 'moderator', 'admin']:  # Add your roles here
+            raise serializers.ValidationError('Invalid role')
+        return role
+
+    def update(self, instance, validated_data):
+        if 'role' in validated_data and not self.context[
+            'request'
+        ].user.is_admin:
+            validated_data.pop('role')
+        return super().update(instance, validated_data)
 
 
 class CategorySerializer(serializers.ModelSerializer):
