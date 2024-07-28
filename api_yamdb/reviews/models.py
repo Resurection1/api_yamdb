@@ -5,14 +5,14 @@ from django.core.validators import (
 )
 from django.db import models
 
-from .constants import (
+from reviews.constants import (
     MAX_LENGTH_NAME,
     MAX_LENGTH_SLUG,
     MAX_LENGTH_TEXT,
     REVIEW_MAX_VALUE,
     REVIEW_MIN_VALUE
 )
-from .validators import max_year_validator
+from reviews.validators import max_year_validator
 
 Author = get_user_model()
 

@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .constants import ADMIN_LIST_PAGE
-from .models import MyUser
+from users.constants import ADMIN_LIST_PAGE
+from users.models import MyUser
 
 
 @admin.register(MyUser)
