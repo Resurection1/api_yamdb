@@ -12,7 +12,6 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from api.v1.filters import TitleFilter
-from api.v1.mixin import MixinCreateDestroy
 from api.v1.permissions import (
     IsAdminOrSuperUser,
     IsAuthorOrAdminOrModerOnly
@@ -41,14 +40,11 @@ class UserCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     def create(self, request, *args, **kwargs):
         """Создает объект класса MyUser."""
-
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
 
-        if serializer.instance:
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class UserReceiveTokenViewSet(mixins.CreateModelMixin,
@@ -61,7 +57,6 @@ class UserReceiveTokenViewSet(mixins.CreateModelMixin,
 
     def create(self, request, *args, **kwargs):
         """Предоставляет пользователю JWT токен по коду подтверждения."""
-
         serializer = UserRecieveTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data.get('username')
@@ -98,14 +93,13 @@ class UserViewSet(viewsets.ModelViewSet):
         if request.method == 'GET':
             serializer = UserSerializer(user)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        if request.method == 'PATCH':
-            data = request.data.copy()
-            if 'role' in data and not request.user.is_admin:
-                data.pop('role')
-            serializer = UserSerializer(user, data=data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        if 'role' in request.data and not request.user.is_admin:
+            serializer.validated_data['role'] = user.role
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -120,19 +114,16 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_review(self):
         """Возвращает объект текущего отзыва."""
-
         title_id = self.kwargs.get('title_id')
         review_id = self.kwargs.get('review_id')
         return get_object_or_404(Review, pk=review_id, title_id=title_id)
 
     def get_queryset(self):
         """Возвращает queryset c комментариями для текущего отзыва."""
-
-        return self.get_review().comments.all().order_by('id')
+        return self.get_review().comments.all().order_by('text')
 
     def perform_create(self, serializer):
         """Создает комментарий для текущего отзыва."""
-
         serializer.save(
             author=self.request.user,
             review=self.get_review()
@@ -151,18 +142,15 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def get_title(self):
         """Возвращает объект текущего произведения."""
-
         title_id = self.kwargs.get('title_id')
         return get_object_or_404(Title, pk=title_id)
 
     def get_queryset(self):
         """Возвращает queryset c отзывами для текущего произведения."""
-
-        return self.get_title().reviews.all().order_by('id')
+        return self.get_title().reviews.all().order_by('text')
 
     def perform_create(self, serializer):
         """Создает отзыв для текущего произведения."""
-
         serializer.save(
             author=self.request.user,
             title=self.get_title()
@@ -183,20 +171,32 @@ class TitleViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         """Определяет какой сериализатор будет использоваться."""
-
         if self.request.method == SAFE_METHODS:
             return TitleGetSerializer
         return TitleSerializer
 
 
-class CategoryViewSet(MixinCreateDestroy):
+class CategoryGenreViewSet(mixins.CreateModelMixin,
+                           mixins.ListModelMixin,
+                           mixins.DestroyModelMixin,
+                           viewsets.GenericViewSet):
+    """Вьюсет, позволяющий осуществлять GET, POST и DELETE запросы."""
+
+    permission_classes = (
+        DjangoModelPermissionsOrAnonReadOnly | IsAdminOrSuperUser,)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+    lookup_field = 'slug'
+
+
+class CategoryViewSet(CategoryGenreViewSet):
     """Вьюсет для создания обьектов класса Category."""
 
     queryset = Categories.objects.all().order_by('name')
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(MixinCreateDestroy):
+class GenreViewSet(CategoryGenreViewSet):
     """Вьюсет для создания обьектов класса Genre."""
 
     queryset = Genres.objects.all().order_by('name')

@@ -69,6 +69,11 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+В проекте реализована функция для базового заполнение базы данных:
+
+```
+python manage.py load_data
+```
 
 ## Примеры запросов к API
 ```

@@ -5,10 +5,10 @@ from django.core.validators import (
 )
 from django.db import models
 
-from reviews.constants import (
+from api.v1.constants import (
     MAX_LENGTH_NAME,
     MAX_LENGTH_SLUG,
-    MAX_LENGTH_TEXT,
+    MAX_LENGTH_TEXT_STR,
     REVIEW_MAX_VALUE,
     REVIEW_MIN_VALUE
 )
@@ -36,7 +36,7 @@ class BaseGenresCategories(models.Model):
         ordering = ('name',)
 
     def __str__(self):
-        return self.name[:MAX_LENGTH_TEXT]
+        return self.name[:MAX_LENGTH_TEXT_STR]
 
 
 class BaseReviewComments(models.Model):
@@ -59,13 +59,13 @@ class BaseReviewComments(models.Model):
         ordering = ('-pub_date',)
 
     def __str__(self):
-        return self.text[:MAX_LENGTH_TEXT]
+        return self.text[:MAX_LENGTH_TEXT_STR]
 
 
 class Genres(BaseGenresCategories):
     """Класс жанров."""
 
-    class Meta:
+    class Meta(BaseGenresCategories.Meta):
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
@@ -73,7 +73,7 @@ class Genres(BaseGenresCategories):
 class Categories(BaseGenresCategories):
     """Класс категорий."""
 
-    class Meta:
+    class Meta(BaseGenresCategories.Meta):
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
@@ -86,7 +86,7 @@ class Title(models.Model):
         verbose_name='Название произведения',
 
     )
-    year = models.PositiveIntegerField(
+    year = models.SmallIntegerField(
         validators=[max_year_validator],
         verbose_name='Год выпуска',
     )
@@ -112,7 +112,7 @@ class Title(models.Model):
         ordering = ('name',)
 
     def __str__(self):
-        return self.name[:MAX_LENGTH_TEXT]
+        return self.name[:MAX_LENGTH_TEXT_STR]
 
 
 class TitleGenre(models.Model):
@@ -145,7 +145,7 @@ class Review(BaseReviewComments):
         null=True
     )
 
-    class Meta:
+    class Meta(BaseReviewComments.Meta):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = (
@@ -166,6 +166,6 @@ class Comments(BaseReviewComments):
         verbose_name='Отзыв',
     )
 
-    class Meta:
+    class Meta(BaseReviewComments.Meta):
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'

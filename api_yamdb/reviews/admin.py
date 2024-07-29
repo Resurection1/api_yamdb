@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.db.models import Avg
 
 from reviews.models import Categories, Comments, Genres, Review, Title
+from api.v1.constants import AVERAGE_SCORE, LIST_PER_PAGE
 
 
 @admin.register(Categories)
@@ -15,7 +16,7 @@ class CategoryAdmin(admin.ModelAdmin):
     )
     empty_value_display = 'значение отсутствует'
     list_filter = ('name',)
-    list_per_page = 10
+    list_per_page = LIST_PER_PAGE
     search_fields = ('name',)
     prepopulated_fields = {'slug': ('name',)}
 
@@ -31,7 +32,7 @@ class GenreAdmin(admin.ModelAdmin):
     )
     empty_value_display = 'значение отсутствует'
     list_filter = ('name',)
-    list_per_page = 10
+    list_per_page = LIST_PER_PAGE
     search_fields = ('name',)
     prepopulated_fields = {'slug': ('name',)}
 
@@ -52,7 +53,7 @@ class TitleAdmin(admin.ModelAdmin):
     )
     empty_value_display = 'значение отсутствует'
     list_filter = ('name',)
-    list_per_page = 10
+    list_per_page = LIST_PER_PAGE
     search_fields = ('name', 'year', 'category')
 
     def get_genre(self, object):
@@ -69,7 +70,7 @@ class TitleAdmin(admin.ModelAdmin):
         """Вычисляет рейтинг произведения."""
 
         rating = object.reviews.aggregate(average_score=Avg('score'))
-        return round(rating.get('average_score'), 1)
+        return round(rating.get('average_score'), AVERAGE_SCORE)
 
 
 @admin.register(Review)
@@ -86,8 +87,8 @@ class ReviewAdmin(admin.ModelAdmin):
     )
     empty_value_display = 'значение отсутствует'
     list_filter = ('author', 'score', 'pub_date')
-    list_per_page = 10
-    search_fields = ('author',)
+    list_per_page = LIST_PER_PAGE
+    search_fields = ('author__username',)
 
 
 @admin.register(Comments)
@@ -103,8 +104,8 @@ class CommentAdmin(admin.ModelAdmin):
     )
     empty_value_display = 'значение отсутствует'
     list_filter = ('author', 'pub_date')
-    list_per_page = 10
-    search_fields = ('author',)
+    list_per_page = LIST_PER_PAGE
+    search_fields = ('author__username',)
 
 
 admin.site.site_title = 'Администрирование YaMDb'

@@ -36,7 +36,6 @@ FIELDS = {
 
 def clean_date(date_str):
     """Функция преобразования даты."""
-
     try:
         return datetime.strptime(
             date_str, '%Y-%m-%dT%H:%M:%S.%fZ'
@@ -47,20 +46,17 @@ def clean_date(date_str):
 
 def open_csv_file(file_name):
     """Менеджер контекста для открытия csv-файлов."""
-
     csv_file = file_name + '.csv'
     csv_path = os.path.join(CSV_FILES_DIR, csv_file)
     try:
         with (open(csv_path, encoding='utf-8')) as file:
             return list(csv.reader(file))
     except FileNotFoundError:
-        print(f'Файл {csv_file} не найден.')
-        return
+        return f'Файл {csv_file} не найден.'
 
 
 def change_foreign_values(data_csv):
     """Изменяет значения."""
-
     data_csv_copy = data_csv.copy()
     for field_key, field_value in data_csv.items():
         if field_key in FIELDS.keys():
@@ -72,7 +68,6 @@ def change_foreign_values(data_csv):
 
 def load_csv(file_name, class_name):
     """Осуществляет загрузку csv-файлов."""
-
     table_not_loaded = f'Таблица {class_name.__qualname__} не загружена.'
     table_loaded = f'Таблица {class_name.__qualname__} загружена.'
     data = open_csv_file(file_name)
@@ -86,10 +81,9 @@ def load_csv(file_name, class_name):
             table = class_name(**data_csv)
             table.save()
         except (ValueError, IntegrityError) as error:
-            print(f'Ошибка в загружаемых данных. {error}. '
-                  f'{table_not_loaded}')
-            break
-    print(table_loaded)
+            return (f'Ошибка в загружаемых данных. {error}. '
+                    f'{table_not_loaded}')
+    return table_loaded
 
 
 class Command(BaseCommand):
@@ -97,5 +91,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for key, value in FILES_CLASSES.items():
-            print(f'Загрузка таблицы {value.__qualname__}')
-            load_csv(key, value)
+            self.stdout.write(f'Загрузка таблицы {value.__qualname__}')
+            result = load_csv(key, value)
+            self.stdout.write(result)

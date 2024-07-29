@@ -2,7 +2,14 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.validators import RegexValidator
 from rest_framework import serializers
 
-from api.v1.constants import MAX_LENGTH_EMAIL, MAX_LENGTH_NAME, USERNAME_CHECK
+from api.v1.constants import (
+    AVERAGE_SCORE,
+    MAX_LENGTH_CODE,
+    MAX_LENGTH_EMAIL,
+    MAX_LENGTH_NAME,
+    NAME_ME,
+    USERNAME_CHECK
+)
 from api.v1.utils import send_confirmation_code
 from reviews.models import Categories, Comments, Genres, Review, Title
 from users.models import MyUser
@@ -33,9 +40,9 @@ class UserCreateSerializer(serializers.Serializer):
         if MyUser.objects.all().filter(email=email, username=username):
             return data
 
-        if data.get('username') == 'me':
+        if data.get('username') == NAME_ME:
             raise serializers.ValidationError(
-                'Использовать имя "me" запрещено')
+                f'Использовать имя "{NAME_ME}" запрещено')
 
         if MyUser.objects.filter(username=username).exists():
             raise serializers.ValidationError(
@@ -47,13 +54,10 @@ class UserCreateSerializer(serializers.Serializer):
         return data
 
     def create(self, validated_data):
-        user, created = MyUser.objects.get_or_create(
+        user, _ = MyUser.objects.get_or_create(
             username=validated_data['username'],
-            defaults={'email': validated_data['email']}
+            email=validated_data['email']
         )
-        if not created:
-            user.email = validated_data['email']
-            user.save(update_fields=['email'])
 
         confirmation_code = default_token_generator.make_token(user)
         send_confirmation_code(
@@ -65,12 +69,12 @@ class UserRecieveTokenSerializer(serializers.Serializer):
     """Сериализатор для объекта класса MyUser при получении токена JWT."""
 
     username = serializers.RegexField(
-        regex=r'^[\w.@+-]+$',
-        max_length=150,
+        regex=USERNAME_CHECK,
+        max_length=MAX_LENGTH_NAME,
         required=True
     )
     confirmation_code = serializers.CharField(
-        max_length=150,
+        max_length=MAX_LENGTH_CODE,
         required=True
     )
 
@@ -84,23 +88,11 @@ class UserSerializer(serializers.ModelSerializer):
                   'last_name', 'bio', 'role')
 
     def validate_username(self, username):
-        if username == 'me':
+        if username == NAME_ME:
             raise serializers.ValidationError(
-                'Использовать имя me запрещено'
+                f'Использовать имя "{NAME_ME}" запрещено'
             )
         return username
-
-    def validate_role(self, role):
-        if role not in ['user', 'moderator', 'admin']:  # Add your roles here
-            raise serializers.ValidationError('Invalid role')
-        return role
-
-    def update(self, instance, validated_data):
-        if 'role' in validated_data and not self.context[
-            'request'
-        ].user.is_admin:
-            validated_data.pop('role')
-        return super().update(instance, validated_data)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -124,7 +116,7 @@ class TitleGetSerializer(serializers.ModelSerializer):
 
     genre = GenreSerializer(many=True, read_only=True)
     category = CategorySerializer(read_only=True)
-    rating = serializers.IntegerField(read_only=True)
+    rating = serializers.IntegerField(read_only=True, default=AVERAGE_SCORE)
 
     class Meta:
         model = Title
@@ -140,7 +132,9 @@ class TitleSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(
         slug_field='slug',
         queryset=Genres.objects.all(),
-        many=True
+        many=True,
+        required=True,
+        allow_empty=False
     )
     category = serializers.SlugRelatedField(
         slug_field='slug',
@@ -154,7 +148,6 @@ class TitleSerializer(serializers.ModelSerializer):
 
     def to_representation(self, title):
         """Определяет какой сериализатор будет использоваться для чтения."""
-
         serializer = TitleGetSerializer(title)
         return serializer.data
 
@@ -162,7 +155,8 @@ class TitleSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     """Сериалайзер для модели комментарий."""
 
-    author = serializers.StringRelatedField(
+    author = serializers.SlugRelatedField(
+        slug_field='username',
         read_only=True
     )
 
@@ -174,7 +168,8 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     """Сериализатор для можели отзывов."""
-    author = serializers.StringRelatedField(
+    author = serializers.SlugRelatedField(
+        slug_field='username',
         read_only=True
     )
 
