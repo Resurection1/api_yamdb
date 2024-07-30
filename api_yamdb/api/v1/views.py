@@ -96,9 +96,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         serializer = UserSerializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        if 'role' in request.data and not request.user.is_admin:
-            serializer.validated_data['role'] = user.role
-        serializer.save()
+        serializer.save(role=user.role)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -120,7 +118,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Возвращает queryset c комментариями для текущего отзыва."""
-        return self.get_review().comments.all().order_by('text')
+        return self.get_review().comments.all()
 
     def perform_create(self, serializer):
         """Создает комментарий для текущего отзыва."""
@@ -147,7 +145,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Возвращает queryset c отзывами для текущего произведения."""
-        return self.get_title().reviews.all().order_by('text')
+        return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
         """Создает отзыв для текущего произведения."""

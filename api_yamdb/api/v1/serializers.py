@@ -40,7 +40,7 @@ class UserCreateSerializer(serializers.Serializer):
         if MyUser.objects.all().filter(email=email, username=username):
             return data
 
-        if data.get('username') == NAME_ME:
+        if username == NAME_ME:
             raise serializers.ValidationError(
                 f'Использовать имя "{NAME_ME}" запрещено')
 
@@ -134,7 +134,8 @@ class TitleSerializer(serializers.ModelSerializer):
         queryset=Genres.objects.all(),
         many=True,
         required=True,
-        allow_empty=False
+        allow_empty=False,
+        allow_null=True
     )
     category = serializers.SlugRelatedField(
         slug_field='slug',

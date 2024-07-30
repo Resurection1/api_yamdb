@@ -26,7 +26,6 @@ class BaseGenresCategories(models.Model):
         db_index=True
     )
     slug = models.SlugField(
-        max_length=MAX_LENGTH_SLUG,
         verbose_name='slug',
         unique=True,
     )
@@ -146,6 +145,7 @@ class Review(BaseReviewComments):
     )
 
     class Meta(BaseReviewComments.Meta):
+        default_related_name = 'reviews'
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = (
@@ -167,5 +167,6 @@ class Comments(BaseReviewComments):
     )
 
     class Meta(BaseReviewComments.Meta):
+        default_related_name = 'comments'
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
