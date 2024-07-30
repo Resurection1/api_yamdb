@@ -7,7 +7,6 @@ from django.db import models
 
 from api.v1.constants import (
     MAX_LENGTH_NAME,
-    MAX_LENGTH_SLUG,
     MAX_LENGTH_TEXT_STR,
     REVIEW_MAX_VALUE,
     REVIEW_MIN_VALUE
